@@ -45,10 +45,6 @@ func GetAuthSystemTest(t *testing.T, ctx context.Context) *AuthSystem {
 
 	ctr, err := tcdynamodb.Run(ctx, "amazon/dynamodb-local:2.2.1", tcdynamodb.WithSharedDB())
 
-	t.Cleanup(func() {
-		require.NoError(t, ctr.Terminate(context.Background()))
-	})
-
 	require.NoError(t, err)
 
 	hostPort, err := ctr.ConnectionString(ctx)
@@ -67,65 +63,71 @@ func GetAuthSystemTest(t *testing.T, ctx context.Context) *AuthSystem {
 		o.EndpointResolverV2 = &DynamoDBLocalResolver{HostAndPort: hostPort}
 	})
 
-	_, err = ddbClient.CreateTable(ctx, &dynamodb.CreateTableInput{
-		TableName: aws.String("users"),
-		AttributeDefinitions: []types.AttributeDefinition{
-			{
-				AttributeName: aws.String("client_id"),
-				AttributeType: types.ScalarAttributeTypeS,
-			},
-			{
-				AttributeName: aws.String("org_id"),
-				AttributeType: types.ScalarAttributeTypeS,
-			},
-		},
-		KeySchema: []types.KeySchemaElement{
-			{
-				AttributeName: aws.String("client_id"),
-				KeyType:       types.KeyTypeHash,
-			},
-			{
-				AttributeName: aws.String("org_id"),
-				KeyType:       types.KeyTypeRange,
-			},
-		},
-		ProvisionedThroughput: &types.ProvisionedThroughput{
-			ReadCapacityUnits:  aws.Int64(1),
-			WriteCapacityUnits: aws.Int64(1),
-		},
-	})
+	listTablesOutput, err := ddbClient.ListTables(ctx, &dynamodb.ListTablesInput{})
 
 	require.NoError(t, err)
 
-	_, err = ddbClient.CreateTable(ctx, &dynamodb.CreateTableInput{
-		TableName: aws.String("sessions"),
-		AttributeDefinitions: []types.AttributeDefinition{
-			{
-				AttributeName: aws.String("session_id"),
-				AttributeType: types.ScalarAttributeTypeS,
+	if len(listTablesOutput.TableNames) == 0 {
+		_, err = ddbClient.CreateTable(ctx, &dynamodb.CreateTableInput{
+			TableName: aws.String("users"),
+			AttributeDefinitions: []types.AttributeDefinition{
+				{
+					AttributeName: aws.String("client_id"),
+					AttributeType: types.ScalarAttributeTypeS,
+				},
+				{
+					AttributeName: aws.String("org_id"),
+					AttributeType: types.ScalarAttributeTypeS,
+				},
 			},
-			{
-				AttributeName: aws.String("client_id"),
-				AttributeType: types.ScalarAttributeTypeS,
+			KeySchema: []types.KeySchemaElement{
+				{
+					AttributeName: aws.String("client_id"),
+					KeyType:       types.KeyTypeHash,
+				},
+				{
+					AttributeName: aws.String("org_id"),
+					KeyType:       types.KeyTypeRange,
+				},
 			},
-		},
-		KeySchema: []types.KeySchemaElement{
-			{
-				AttributeName: aws.String("session_id"),
-				KeyType:       types.KeyTypeHash,
+			ProvisionedThroughput: &types.ProvisionedThroughput{
+				ReadCapacityUnits:  aws.Int64(1),
+				WriteCapacityUnits: aws.Int64(1),
 			},
-			{
-				AttributeName: aws.String("client_id"),
-				KeyType:       types.KeyTypeRange,
-			},
-		},
-		ProvisionedThroughput: &types.ProvisionedThroughput{
-			ReadCapacityUnits:  aws.Int64(1),
-			WriteCapacityUnits: aws.Int64(1),
-		},
-	})
+		})
 
-	require.NoError(t, err)
+		require.NoError(t, err)
+
+		_, err = ddbClient.CreateTable(ctx, &dynamodb.CreateTableInput{
+			TableName: aws.String("sessions"),
+			AttributeDefinitions: []types.AttributeDefinition{
+				{
+					AttributeName: aws.String("session_id"),
+					AttributeType: types.ScalarAttributeTypeS,
+				},
+				{
+					AttributeName: aws.String("client_id"),
+					AttributeType: types.ScalarAttributeTypeS,
+				},
+			},
+			KeySchema: []types.KeySchemaElement{
+				{
+					AttributeName: aws.String("session_id"),
+					KeyType:       types.KeyTypeHash,
+				},
+				{
+					AttributeName: aws.String("client_id"),
+					KeyType:       types.KeyTypeRange,
+				},
+			},
+			ProvisionedThroughput: &types.ProvisionedThroughput{
+				ReadCapacityUnits:  aws.Int64(1),
+				WriteCapacityUnits: aws.Int64(1),
+			},
+		})
+
+		require.NoError(t, err)
+	}
 
 	return &AuthSystem{
 		FiberApp:  fiber.New(),
