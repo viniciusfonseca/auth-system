@@ -5,6 +5,6 @@ import (
 	authsystem "github.com/viniciusfonseca/auth-system/internal/shared"
 )
 
-type AuthSystem = authsystem.AuthSystem
+var NewAuthSystem = authsystem.NewAuthSystem
 
 var AddAuthGroup = authsystemroutes.AddAuthGroup
