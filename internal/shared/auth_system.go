@@ -21,7 +21,7 @@ type AuthSystem struct {
 	DdbClient *dynamodb.Client
 }
 
-func NewAuthSystem() *AuthSystem {
+func NewAuthSystem(fiberApp *fiber.App) *AuthSystem {
 
 	ctx := context.Background()
 
@@ -33,6 +33,7 @@ func NewAuthSystem() *AuthSystem {
 	ddbClient := dynamodb.NewFromConfig(cfg)
 
 	return &AuthSystem{
+		FiberApp:  fiberApp,
 		DdbClient: ddbClient,
 	}
 }
